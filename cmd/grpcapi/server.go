@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/Sandwichzzy/school_manager_system_grpc/internals/api/handlers"
-	"github.com/Sandwichzzy/school_manager_system_grpc/internals/repositories/mongodb"
 	pb "github.com/Sandwichzzy/school_manager_system_grpc/proto/gen"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -16,9 +15,6 @@ import (
 )
 
 func main() {
-	// 初始化 MongoDB 客户端
-	mongodb.CreateMongoClient()
-
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")

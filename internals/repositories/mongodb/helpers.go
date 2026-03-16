@@ -44,13 +44,13 @@ func mapModelTeacherToPb(teacherModel models.Teacher) *pb.Teacher {
 	return mapModelToPb(teacherModel, func() *pb.Teacher { return &pb.Teacher{} })
 }
 
-// func mapModelStudentToPb(studentModel models.Student) *pb.Student {
-// 	return mapModelToPb(studentModel, func() *pb.Student { return &pb.Student{} })
-// }
+func mapModelStudentToPb(studentModel models.Student) *pb.Student {
+	return mapModelToPb(studentModel, func() *pb.Student { return &pb.Student{} })
+}
 
-// func mapModelExecToPb(execModel models.Exec) *pb.Exec {
-// 	return mapModelToPb(execModel, func() *pb.Exec { return &pb.Exec{} })
-// }
+func mapModelExecToPb(execModel models.Exec) *pb.Exec {
+	return mapModelToPb(execModel, func() *pb.Exec { return &pb.Exec{} })
+}
 
 func mapModelToPb[M any, P any](model M, newPb func() *P) *P {
 	pbStruct := newPb()
@@ -74,20 +74,20 @@ func mapPbTeacherToModelTeacher(pbTeacher *pb.Teacher) *models.Teacher {
 	return mapPbToModel(pbTeacher, func() *models.Teacher { return &models.Teacher{} })
 }
 
-// func mapPbStudentToModelStudent(pbStudent *pb.Student) *models.Student {
-// 	return mapPbToModel(pbStudent, func() *models.Student { return &models.Student{} })
-// }
+func mapPbStudentToModelStudent(pbStudent *pb.Student) *models.Student {
+	return mapPbToModel(pbStudent, func() *models.Student { return &models.Student{} })
+}
 
-// func mapPbExecToModelExec(pbExec *pb.Exec) *models.Exec {
-// 	return mapPbToModel(pbExec, func() *models.Exec { return &models.Exec{} })
-// }
+func mapPbExecToModelExec(pbExec *pb.Exec) *models.Exec {
+	return mapPbToModel(pbExec, func() *models.Exec { return &models.Exec{} })
+}
 
 func mapPbToModel[P any, M any](pbStruct P, newModel func() *M) *M {
 	modelStruct := newModel()
 	// 使用反射获取 protobuf 教师对象的可反射值（假设 pbTeacher 是指针，调用 Elem() 获取其指向的值）
 	pbVal := reflect.ValueOf(pbStruct).Elem()
 	// 获取 modelTeacher 的可设置反射值（传递指针以便能够修改字段）
-	modelVal := reflect.ValueOf(&modelStruct).Elem()
+	modelVal := reflect.ValueOf(modelStruct).Elem()
 	for i := 0; i < pbVal.NumField(); i++ {
 		// 获取当前字段的反射值和字段名
 		pbField := pbVal.Field(i)
