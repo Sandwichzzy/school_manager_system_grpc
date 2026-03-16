@@ -2,6 +2,7 @@ package mongodb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -26,7 +27,7 @@ func AddTeachersToDb(ctx context.Context, teachersFromReq []*pb.Teacher) ([]*pb.
 	newTeachers := make([]*models.Teacher, len(teachersFromReq))
 	// 遍历请求中的每个 protobuf 教师对象
 	for i, pbTeacher := range teachersFromReq {
-		newTeachers[i] = mapPbTeacherToModelTeacher(pbTeacher)
+		newTeachers[i] = MapPbTeacherToModelTeacher(pbTeacher)
 	}
 	var addedTeachers []*pb.Teacher
 	for _, teacher := range newTeachers {
@@ -40,7 +41,7 @@ func AddTeachersToDb(ctx context.Context, teachersFromReq []*pb.Teacher) ([]*pb.
 		}
 		fmt.Println(objectId)
 
-		pbTeacher := mapModelTeacherToPb(teacher)
+		pbTeacher := MapModelTeacherToPb(teacher)
 		addedTeachers = append(addedTeachers, pbTeacher)
 	}
 	return addedTeachers, nil
@@ -72,7 +73,51 @@ func GetTeachersFromDB(ctx context.Context, sortOptions bson.D, filter bson.M) (
 	return teachers, nil
 }
 
-func mapModelTeacherToPb(teacher *models.Teacher) *pb.Teacher {
+func ModifyTeachersInDB(ctx context.Context, pbTeachers []*pb.Teacher) ([]*pb.Teacher, error) {
+	client, err := CreateMongoClient()
+	if err != nil {
+		return nil, utils.ErrorHandler(err, "internal error")
+	}
+	defer client.Disconnect(ctx)
+
+	var updatedTeachers []*pb.Teacher
+	for _, teacher := range pbTeachers {
+		if teacher.Id == "" {
+			return nil, utils.ErrorHandler(errors.New("id cannot be blank"), "id cannnot be blank!")
+		}
+		modelTeacher := MapPbTeacherToModelTeacher(teacher)
+		objId, err := primitive.ObjectIDFromHex(teacher.Id)
+		if err != nil {
+			return nil, utils.ErrorHandler(err, "invalid id")
+		}
+
+		//convert modelTeacher to BSON document
+		modelDoc, err := bson.Marshal(modelTeacher)
+		if err != nil {
+			return nil, utils.ErrorHandler(err, "internal error")
+		}
+
+		//bson.Unmarshal 将刚刚编码的二进制数据解码到 updateDoc 中，即把结构体字段和值映射到一个 map 里。
+		var updateDoc bson.M
+		err = bson.Unmarshal(modelDoc, &updateDoc)
+		if err != nil {
+			return nil, utils.ErrorHandler(err, "internal error")
+		}
+
+		// remove the _id field from the update document
+		delete(updateDoc, "_id")
+		_, err = client.Database("school").Collection("teachers").UpdateOne(ctx, bson.M{"_id": objId}, bson.M{"$set": updateDoc})
+		if err != nil {
+			return nil, utils.ErrorHandler(err, fmt.Sprintln("error updatding teacher id:", teacher.Id))
+		}
+		updatedTeacher := MapModelTeacherToPb(modelTeacher)
+
+		updatedTeachers = append(updatedTeachers, updatedTeacher)
+	}
+	return updatedTeachers, nil
+}
+
+func MapModelTeacherToPb(teacher *models.Teacher) *pb.Teacher {
 	pbTeacher := &pb.Teacher{}
 	modelVal := reflect.ValueOf(*teacher)
 	pbVal := reflect.ValueOf(pbTeacher).Elem()
@@ -90,7 +135,7 @@ func mapModelTeacherToPb(teacher *models.Teacher) *pb.Teacher {
 	return pbTeacher
 }
 
-func mapPbTeacherToModelTeacher(pbTeacher *pb.Teacher) *models.Teacher {
+func MapPbTeacherToModelTeacher(pbTeacher *pb.Teacher) *models.Teacher {
 	modelTeacher := models.Teacher{}
 	// 使用反射获取 protobuf 教师对象的可反射值（假设 pbTeacher 是指针，调用 Elem() 获取其指向的值）
 	pbVal := reflect.ValueOf(pbTeacher).Elem()
