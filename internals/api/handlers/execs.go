@@ -39,3 +39,26 @@ func (s *Server) GetExecs(ctx context.Context, req *pb.GetExecsRequest) (*pb.Exe
 	}
 	return &pb.Execs{Execs: execs}, nil
 }
+
+func (s *Server) UpdateExecs(ctx context.Context, req *pb.Execs) (*pb.Execs, error) {
+
+	updatedExecs, err := mongodb.ModifyExecsInDb(ctx, req.Execs)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &pb.Execs{Execs: updatedExecs}, nil
+}
+
+func (s *Server) DeleteExecs(ctx context.Context, req *pb.ExecIds) (*pb.DeleteExecsConfirmation, error) {
+
+	deletedIds, err := mongodb.DeleteExecsFromDb(ctx, req.GetIds())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &pb.DeleteExecsConfirmation{
+		Status:     "Execs successfully deleted",
+		DeletedIds: deletedIds,
+	}, nil
+}
