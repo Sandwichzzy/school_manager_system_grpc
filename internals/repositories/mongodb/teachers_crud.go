@@ -6,7 +6,10 @@ import (
 	"reflect"
 
 	pb "github.com/Sandwichzzy/school_manager_system_grpc/proto/gen"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/Sandwichzzy/school_manager_system_grpc/internals/models"
 	"github.com/Sandwichzzy/school_manager_system_grpc/pkg/utils"
@@ -33,7 +36,7 @@ func AddTeachersToDb(ctx context.Context, teachersFromReq []*pb.Teacher) ([]*pb.
 		}
 		objectId, ok := result.InsertedID.(primitive.ObjectID)
 		if ok {
-			teacher.ID = objectId.Hex()
+			teacher.Id = objectId.Hex()
 		}
 		fmt.Println(objectId)
 
@@ -41,6 +44,32 @@ func AddTeachersToDb(ctx context.Context, teachersFromReq []*pb.Teacher) ([]*pb.
 		addedTeachers = append(addedTeachers, pbTeacher)
 	}
 	return addedTeachers, nil
+}
+
+func GetTeachersFromDB(ctx context.Context, sortOptions bson.D, filter bson.M) ([]*pb.Teacher, error) {
+	client, err := CreateMongoClient()
+	if err != nil {
+		return nil, utils.ErrorHandler(err, "Internal Error")
+	}
+	defer client.Disconnect(ctx)
+	coll := client.Database("school").Collection("teachers")
+	var cursor *mongo.Cursor
+	if len(sortOptions) < 1 {
+		cursor, err = coll.Find(ctx, filter)
+	} else {
+		cursor, err = coll.Find(ctx, filter, options.Find().SetSort(sortOptions))
+	}
+
+	if err != nil {
+		return nil, utils.ErrorHandler(err, "Internal error")
+	}
+	defer cursor.Close(ctx)
+
+	teachers, err := decodeEntities(ctx, cursor, func() *pb.Teacher { return &pb.Teacher{} }, func() *models.Teacher { return &models.Teacher{} })
+	if err != nil {
+		return nil, err
+	}
+	return teachers, nil
 }
 
 func mapModelTeacherToPb(teacher *models.Teacher) *pb.Teacher {
