@@ -125,3 +125,17 @@ func (s *Server) ReactivateUser(ctx context.Context, req *pb.ExecIds) (*pb.Confi
 		Confirmation: result.ModifiedCount > 0,
 	}, nil
 }
+
+func (s *Server) ForgotPassword(ctx context.Context, req *pb.ForgotPasswordRequest) (*pb.ForgotPasswordResponse, error) {
+	email := req.GetEmail()
+
+	message, err := mongodb.ForgotPasswordDb(ctx, email)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &pb.ForgotPasswordResponse{
+		Confirmation: true,
+		Message:      message,
+	}, nil
+}
