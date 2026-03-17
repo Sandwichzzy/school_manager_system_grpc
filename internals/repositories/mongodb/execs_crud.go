@@ -344,3 +344,43 @@ func ForgotPasswordDb(ctx context.Context, email string) (string, error) {
 	}
 	return message, nil
 }
+
+func ResetPasswordDb(ctx context.Context, tokenInDb string, newPassword string) error {
+	client, err := CreateMongoClient()
+	if err != nil {
+		return utils.ErrorHandler(err, "internal error")
+	}
+	defer client.Disconnect(ctx)
+
+	filter := bson.M{
+		"password_reset_token": tokenInDb,
+		"password_token_expires": bson.M{
+			"$gt": time.Now().Format(time.RFC3339),
+		},
+	}
+	var exec models.Exec
+	err = client.Database("school").Collection("execs").FindOne(ctx, filter).Decode(&exec)
+	if err != nil {
+		return utils.ErrorHandler(err, "Invalid or expired token")
+	}
+
+	hashedPassword, err := utils.HashPassword(newPassword)
+	if err != nil {
+		return utils.ErrorHandler(err, "internal error")
+	}
+
+	update := bson.M{
+		"$set": bson.M{
+			"password":               hashedPassword,
+			"password_reset_token":   nil,
+			"password_token_expires": nil,
+			"password_changed_at":    time.Now().Format(time.RFC3339),
+		},
+	}
+
+	_, err = client.Database("school").Collection("execs").UpdateOne(ctx, filter, update)
+	if err != nil {
+		return utils.ErrorHandler(err, "Failed to update the password")
+	}
+	return nil
+}
