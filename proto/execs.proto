@@ -19,6 +19,7 @@ service ExecsService {
     rpc ResetPassword (ResetPasswordRequest) returns (Confirmation);
     rpc ForgotPassword (ForgotPasswordRequest) returns (ForgotPasswordResponse);
     rpc DeactivateUser (ExecIds) returns (Confirmation);
+    rpc ReactivateUser (ExecIds) returns (Confirmation);
 }
 
 message ForgotPasswordResponse {

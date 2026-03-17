@@ -5,6 +5,7 @@ import (
 
 	"github.com/Sandwichzzy/school_manager_system_grpc/internals/models"
 	"github.com/Sandwichzzy/school_manager_system_grpc/internals/repositories/mongodb"
+	"github.com/Sandwichzzy/school_manager_system_grpc/pkg/utils"
 	pb "github.com/Sandwichzzy/school_manager_system_grpc/proto/gen"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -60,5 +61,67 @@ func (s *Server) DeleteExecs(ctx context.Context, req *pb.ExecIds) (*pb.DeleteEx
 	return &pb.DeleteExecsConfirmation{
 		Status:     "Execs successfully deleted",
 		DeletedIds: deletedIds,
+	}, nil
+}
+
+func (s *Server) Login(ctx context.Context, req *pb.ExecLoginRequest) (*pb.ExecLoginResponse, error) {
+	exec, err := mongodb.GetUserByUsername(ctx, req.GetUsername())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	if exec.InactiveStatus {
+		return nil, status.Error(codes.Unauthenticated, "Account is inactive")
+	}
+
+	err = utils.VerifyPassword(req.GetPassword(), exec.Password)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "Incorrect username/password")
+	}
+
+	tokenString, err := utils.SignToken(exec.Id, exec.Username, exec.Role)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "Could not create token.")
+	}
+
+	return &pb.ExecLoginResponse{Status: true, Token: tokenString}, nil
+}
+
+func (s *Server) UpdatePassword(ctx context.Context, req *pb.UpdatePasswordRequest) (*pb.UpdatePasswordResponse, error) {
+	username, userRole, err := mongodb.UpdatePasswordInDb(ctx, req)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+
+	token, err := utils.SignToken(req.Id, username, userRole)
+	if err != nil {
+		return nil, utils.ErrorHandler(err, "internal error")
+	}
+
+	return &pb.UpdatePasswordResponse{
+		PasswordUpdated: true,
+		Token:           token,
+	}, nil
+}
+
+func (s *Server) DeactivateUser(ctx context.Context, req *pb.ExecIds) (*pb.Confirmation, error) {
+	result, err := mongodb.DeactivateUserInDb(ctx, req.GetIds())
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.Confirmation{
+		Confirmation: result.ModifiedCount > 0,
+	}, nil
+}
+
+func (s *Server) ReactivateUser(ctx context.Context, req *pb.ExecIds) (*pb.Confirmation, error) {
+	result, err := mongodb.ReactivateUserInDb(ctx, req.GetIds())
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.Confirmation{
+		Confirmation: result.ModifiedCount > 0,
 	}, nil
 }
