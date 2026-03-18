@@ -15,9 +15,17 @@
 
 
     --------------- BUILDING API BINARY
-    GOOS=darwin GOARCH=amd64 go build -o macOS_api_x86-64.exe server.go (Not if you are working on macOS amd64 system)
+    #参数	作用
+    #GOOS=darwin	目标操作系统是 macOS
+    #GOARCH=amd64	目标架构是 x86_64（Intel Mac）
+    #-o macOS_api_x86-64.exe	输出文件名
+    #server.go	编译入口文件
+
+    #跨平台编译（GOOS / GOARCH）
+    GOOS=darwin GOARCH=amd64 go build -o macOS_api_x86-64 server.go (Not if you are working on macOS amd64 system)
     GOOS=windows GOARCH=amd64 go build -o windows_binary/binary-windows_x86-64 server.go (Not if you are working on macOS amd64 system)
 
+    #普通构建（不同版本
     go build -o cmd/grpcapi/binaries/grpc_api_amd64 cmd/grpcapi/server.go
     go build -o cmd/grpcapi/binaries/grpc_api_amd64_NON_TLS cmd/grpcapi/server.go
     garble build -o cmd/grpcapi/binaries/obfuscated_grpc_api_amd64 cmd/grpcapi/server.go

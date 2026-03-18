@@ -1,11 +1,11 @@
 package main
 
 import (
+	"embed"
 	"fmt"
 	"log"
 	"net"
 	"os"
-	"time"
 
 	"github.com/Sandwichzzy/school_manager_system_grpc/internals/api/handlers"
 	"github.com/Sandwichzzy/school_manager_system_grpc/internals/api/interceptors"
@@ -18,11 +18,53 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func main() {
-	err := godotenv.Load()
+//go:embed .env
+var envFile embed.FS
+
+// 本质原因：godotenv.Load() 只能读“文件路径”，不能读“内存数据”
+// embed.FS (内存)
+//
+//	↓
+//
+// 写入 temp file（磁盘）
+//
+//	↓
+//
+// godotenv.Load(文件路径)
+func loadEnvFromEmbeddedFile() {
+	content, err := envFile.ReadFile(".env")
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Fatalf("Error reading .env file:%v", err)
 	}
+
+	tempFile, err := os.CreateTemp("", ".env")
+	if err != nil {
+		log.Fatalf("Error creating .env file:%v", err)
+	}
+	defer os.Remove(tempFile.Name())
+
+	_, err = tempFile.Write(content)
+	if err != nil {
+		log.Fatalf("Error writing to temp file:%v", err)
+	}
+
+	err = tempFile.Close()
+	if err != nil {
+		log.Fatalf("Error closing write temp file:%v", err)
+	}
+
+	err = godotenv.Load(tempFile.Name())
+	if err != nil {
+		log.Fatalf("Error loading .env file:%v", err)
+	}
+}
+
+func main() {
+	// err := godotenv.Load()
+	// if err != nil {
+	// 	log.Fatal("Error loading .env file")
+	// }
+	loadEnvFromEmbeddedFile()
 
 	cert := os.Getenv("CERT_FILE")
 	key := os.Getenv("KEY_FILE")
@@ -32,8 +74,9 @@ func main() {
 		log.Fatalf("Failed to load TLS certificates")
 	}
 
-	rateLimiter := interceptors.NewRateLimiter(50, time.Minute)
-	s := grpc.NewServer(grpc.ChainUnaryInterceptor(rateLimiter.RateLimitInterceptor, interceptors.ResponseTimeInterceptor, interceptors.AuthenticationInterceptor), grpc.Creds(creds))
+	// rateLimiter := interceptors.NewRateLimiter(50, time.Minute)
+	// s := grpc.NewServer(grpc.ChainUnaryInterceptor(rateLimiter.RateLimitInterceptor, interceptors.ResponseTimeInterceptor, interceptors.AuthenticationInterceptor), grpc.Creds(creds))
+	s := grpc.NewServer(grpc.ChainUnaryInterceptor(interceptors.ResponseTimeInterceptor, interceptors.AuthenticationInterceptor), grpc.Creds(creds))
 
 	pb.RegisterExecsServiceServer(s, &handlers.Server{})
 	pb.RegisterStudentsServiceServer(s, &handlers.Server{})
