@@ -7,14 +7,13 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Sandwichzzy/school_manager_system_grpc/pkg/utils"
 	"github.com/golang-jwt/jwt/v5"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
-
-type ContextKey string
 
 func AuthenticationInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	log.Println("AuthenticationInterceptor started")
@@ -41,6 +40,10 @@ func AuthenticationInterceptor(ctx context.Context, req interface{}, info *grpc.
 
 	tokenStr := strings.TrimPrefix(authHeader[0], "Bearer ")
 	tokenStr = strings.TrimSpace(tokenStr)
+	ok = utils.JwtStore.IsLoggedOut(tokenStr)
+	if ok {
+		return nil, status.Error(codes.Unauthenticated, "Unauthorized Access")
+	}
 
 	jwtSecret := os.Getenv("JWT_SECRET")
 	parsedToken, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
@@ -75,10 +78,10 @@ func AuthenticationInterceptor(ctx context.Context, req interface{}, info *grpc.
 	expiresAtI64 := int64(expiresAtF64)
 	expiresAt := fmt.Sprintf("%v", expiresAtI64)
 
-	newCtx := context.WithValue(ctx, ContextKey("role"), role)
-	newCtx = context.WithValue(newCtx, ContextKey("userId"), userId)
-	newCtx = context.WithValue(newCtx, ContextKey("username"), username)
-	newCtx = context.WithValue(newCtx, ContextKey("expiresAt"), expiresAt)
+	newCtx := context.WithValue(ctx, utils.ContextKey("role"), role)
+	newCtx = context.WithValue(newCtx, utils.ContextKey("userId"), userId)
+	newCtx = context.WithValue(newCtx, utils.ContextKey("username"), username)
+	newCtx = context.WithValue(newCtx, utils.ContextKey("expiresAt"), expiresAt)
 
 	log.Println("Auth interceptor ending")
 	return handler(newCtx, req)
