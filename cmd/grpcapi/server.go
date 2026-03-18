@@ -5,8 +5,10 @@ import (
 	"log"
 	"net"
 	"os"
+	"time"
 
 	"github.com/Sandwichzzy/school_manager_system_grpc/internals/api/handlers"
+	"github.com/Sandwichzzy/school_manager_system_grpc/internals/api/interceptors"
 	pb "github.com/Sandwichzzy/school_manager_system_grpc/proto/gen"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -19,7 +21,9 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
-	s := grpc.NewServer()
+
+	rateLimiter := interceptors.NewRateLimiter(5, time.Minute)
+	s := grpc.NewServer(grpc.ChainUnaryInterceptor(interceptors.ResponseTimeInterceptor, rateLimiter.RateLimitInterceptor, interceptors.AuthenticationInterceptor))
 
 	pb.RegisterExecsServiceServer(s, &handlers.Server{})
 	pb.RegisterStudentsServiceServer(s, &handlers.Server{})
