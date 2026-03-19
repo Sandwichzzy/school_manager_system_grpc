@@ -1,0 +1,17 @@
+{
+  "proto": "/Users/Sandwich/cert/students.proto",
+  "call": "main.StudentsService.GetStudents",
+  "concurrency": 100,
+  "data": {
+    "page_number": 1,
+    "page_size": 300
+  },
+  "max-duration": "20s",
+  "host": "localhost:50051",
+  "cert": "/Users/Sandwich/cert/cert.pem",
+  "key": "/Users/Sandwich/cert/key.pem",
+  "cacert": "/Users/Sandwich/cert/cert.pem",
+  "metadata": {
+    "authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzM4ODU1NzIsInJvbGUiOiJleGVjIiwidWlkIjoiNjliN2VlMDgzOTVkZDBkOWZkNGFjZDhiIiwidXNlciI6Imphc21pbmUuamFja3NvbiJ9.N88EJcA5avm1ek65LhV63uiRxi29iAB5XzuDwPzrosQ"
+  }
+}

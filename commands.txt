@@ -36,3 +36,7 @@
     ./grpc_api_amd64_TLS
     ./obfuscated_grpc_api_amd64_NON_TLS
     ./obfuscated_grpc_api_amd64_TLS
+
+    -----------benchmarking
+    ghz --config ghz_config.json
+    ghz --insecure --config ghz_config.json
